@@ -2,21 +2,21 @@ import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 public class Main {
     public static void main(String[] args) {
-        //[0-1000]
-        int number = (int)(Math.random()*1001);
+        int number = (int)(Math.random()*1001); //[0-1000]
         String response = getResponse(number);
         System.out.println(response);
         var chars = countChar(response);
         prettyPrintChars(chars);
         //Задача со звездочкой
         float averageFrequency = averageFrequency(chars);
-        float inaccuracy = 0.3f;  //погрешность
-        printAppropriateCharacters(chars, averageFrequency, inaccuracy);
+        printAppropriateCharacters(chars, averageFrequency);
     }
     public static String getResponse(int number) {
         byte[] bytes = new byte[0];
@@ -50,13 +50,21 @@ public class Main {
         System.out.printf("Среднее значение частоты %d/%d = %f\n", frequency, chars.size(), result);
         return result;
     }
-    public static void printAppropriateCharacters(HashMap<Character, Integer> chars, float frequency, float inaccuracy){
+    public static void printAppropriateCharacters(HashMap<Character, Integer> chars, float frequency){
         System.out.println("Символы, которые соответствуют условию наиболее близкого значения частоты к среднему значанию:");
-        var appropriateCharacters = chars.entrySet().stream()
-                .filter(kvp-> (frequency - inaccuracy < kvp.getValue() && frequency + inaccuracy > kvp.getValue()) ||
-                                (frequency - inaccuracy > kvp.getValue() && frequency + inaccuracy < kvp.getValue()))
-                .map(Map.Entry::getKey)
-                .collect(Collectors.toSet());
+        AtomicReference<Float> min = new AtomicReference<>((float) Float.MAX_EXPONENT);
+        HashSet<Character> appropriateCharacters = new HashSet<>();
+        chars.forEach((key, value) -> {
+            if (Math.abs(frequency - value) < min.get()) {
+                appropriateCharacters.clear();
+                appropriateCharacters.add(key);
+                min.set(Math.abs(frequency - value));
+            } else if (Math.abs(frequency - value) == min.get()) {
+                appropriateCharacters.add(key);
+                min.set(Math.abs(frequency - value));
+            }
+        });
+
         String result = appropriateCharacters.stream().map(character -> String.format("%c(%d)", character, (int)character))
                 .collect(Collectors.joining(", "));
         System.out.println(result);
